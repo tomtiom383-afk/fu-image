@@ -39,6 +39,9 @@
                     <button v-if="isAdmin" @click="view = 'admin'" class="nav-btn" :class="{ active: view === 'admin' }">
                         <i class="fas fa-cog"></i> <span class="hidden sm:inline">管理</span>
                     </button>
+                    <button v-if="isAdmin" @click="view = 'api'" class="nav-btn" :class="{ active: view === 'api' }">
+                        <i class="fas fa-code"></i> <span class="hidden sm:inline">API</span>
+                    </button>
 
                     <div v-if="isAdmin" class="relative">
                         <button @click="showUserMenu = !showUserMenu" class="nav-btn">
