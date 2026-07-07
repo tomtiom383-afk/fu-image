@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芙的床</title>
+    <script src="/assets/tailwind.js"></script>
+    <script src="/assets/vue.global.js"></script>
+    <link rel="stylesheet" href="/assets/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        primaryHover: '#2563eb',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/style.css?v=11">
+</head>
+<body class="paper-bg bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen transition-colors">
+    <div id="app" v-cloak>
+        <!-- Navbar -->
+        <nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
+            <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3 cursor-pointer" @click="view = 'upload'">
+                    <span class="brand-title font-bold text-lg">芙的床</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button @click="view = 'history'" class="nav-btn" :class="{ active: view === 'history' }">
+                        <i class="fas fa-history"></i> <span class="hidden sm:inline">历史</span>
+                        <span v-if="stats.total_images > 0" class="ml-1 px-1.5 py-0.5 text-xs bg-primary text-white rounded-full">{{ stats.total_images }}</span>
+                    </button>
+                    <button v-if="isAdmin" @click="view = 'admin'" class="nav-btn" :class="{ active: view === 'admin' }">
+                        <i class="fas fa-cog"></i> <span class="hidden sm:inline">管理</span>
+                    </button>
+
+                    <div v-if="isAdmin" class="relative">
+                        <button @click="showUserMenu = !showUserMenu" class="nav-btn">
+                            <span>{{ user.user }}</span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div v-if="showUserMenu" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                            <div class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                                今日上传 {{ stats.daily_uploads }}
+                            </div>
+                            <button @click="logout" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-red-500">
+                                <i class="fas fa-sign-out-alt mr-2"></i>退出
+                            </button>
+                        </div>
+                    </div>
+
+                    <button v-else @click="showLogin = true" class="nav-btn active">
+                        <i class="fas fa-user"></i> 登录
+                    </button>
+
+                    <button @click="toggleTheme" class="nav-btn">
+                        <i v-if="dark" class="fas fa-sun"></i>
+                        <i v-else class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-6xl mx-auto px-4 py-8">
+            <!-- Upload View -->
+            <div v-if="view === 'upload'">
+                <!-- Upload Card -->
+                <div class="max-w-6xl mx-auto">
+                    <div class="upload-card-container" :class="{ flipped: showSettings }">
+                        <!-- Front: Upload Area -->
+                        <div class="upload-card-front"
+                             @dragover.prevent="dragover = true"
+                             @dragleave.prevent="dragover = false"
+                             @drop.prevent="handleDrop"
+                             @click="$refs.fileInput.click()"
+                             :class="{ dragging: dragover }">
+                            <button @click.stop="showSettings = true" class="settings-btn" title="设置">
+                                <i class="fas fa-cog"></i>
+                            </button>
+
+                            <div class="text-center">
+                                <div class="folder-icon">
+                                    <div class="folder">
+                                        <div class="front-side">
+                                            <div class="tip"></div>
+                                            <div class="cover"></div>
+                                        </div>
+                                        <div class="back-side cover"></div>
+                                    </div>
+                                </div>
+                                <h3 class="text-xl font-semibold mt-6">点击或拖拽上传图片</h3>
+                                <p class="text-gray-500 dark:text-gray-400 mt-2">支持 JPG、PNG、GIF、WebP、SVG 等格式</p>
+                                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">💡 也可以直接 <kbd class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Ctrl+V</kbd> 粘贴</p>
+                            </div>
+                        </div>
+
+                        <!-- Back: Settings -->
+                        <div class="upload-card-back">
+                            <button @click="showSettings = false" class="settings-btn" title="返回">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="flex-1 overflow-y-auto min-h-0">
+                                <h3 class="text-lg font-semibold mb-4"><i class="fas fa-cog mr-2"></i>上传设置</h3>
+                                
+                                <div class="space-y-5">
+                                    <div class="setting-row">
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input type="checkbox" v-model="settings.convertWebp" class="mt-1 w-4 h-4 text-primary rounded">
+                                            <div>
+                                                <div class="font-medium">转换为 WebP</div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400">上传后自动转为 WebP 格式，体积更小</div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="setting-row">
+                                        <label class="flex items-start gap-3 cursor-pointer">
+                                            <input type="checkbox" v-model="settings.autoCopy" class="mt-1 w-4 h-4 text-primary rounded">
+                                            <div>
+                                                <div class="font-medium">上传成功自动复制</div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400">自动复制为所选格式</div>
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <div class="setting-row">
+                                        <label class="block font-medium mb-2">默认复制格式</label>
+                                        <select v-model="settings.defaultFormat" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                            <option value="url">URL 直链</option>
+                                            <option value="markdown">Markdown</option>
+                                            <option value="html">HTML</option>
+                                            <option value="bbcode">BBCode</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="handleFileSelect">
+
+                <!-- Results -->
+                <div v-if="results.length > 0" class="max-w-6xl mx-auto mt-8">
+                    <div class="results-panel">
+                        <div class="results-toolbar">
+                            <div>
+                                <div class="results-kicker">上传完成</div>
+                                <h3 class="results-title">{{ results.length }} 张图片已就绪</h3>
+                            </div>
+                            <div class="result-format-tabs" aria-label="复制格式">
+                                <button v-for="fmt in formats" :key="fmt.key" @click="resultFormat = fmt.key"
+                                        class="result-format-tab"
+                                        :class="{ active: resultFormat === fmt.key }">
+                                    {{ fmt.label }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="result-list">
+                            <div v-for="item in results" :key="item.id" class="result-row">
+                                <button @click="preview(item)" class="result-thumb" title="预览">
+                                    <img :src="item.thumb" :alt="item.filename" loading="lazy">
+                                </button>
+                                <div class="result-main">
+                                    <div class="result-meta-row">
+                                        <div class="result-name">{{ item.filename }}</div>
+                                        <div class="result-meta">{{ formatSize(item.size) }} · {{ item.width }}x{{ item.height }}</div>
+                                    </div>
+                                    <div class="result-copy-row">
+                                        <input :value="item.links[resultFormat]" readonly class="result-link-input" @focus="$event.target.select()">
+                                        <button @click="copy(item.links[resultFormat])" class="result-action primary">
+                                            <i class="fas fa-copy"></i>
+                                            <span>复制</span>
+                                        </button>
+                                        <a :href="item.links.url" target="_blank" rel="noopener" class="result-action secondary">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            <span>打开</span>
+                                        </a>
+                                        <button v-if="isAdmin" @click="deleteImage(item.id, 'results')" class="result-action danger" title="删除">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div v-if="view === 'history'">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold">历史上传</h2>
+                    <div v-if="selectedImages.length > 0" class="flex gap-2">
+                        <button @click="batchCopy" class="px-4 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg text-sm">复制选中</button>
+                        <button @click="batchDelete" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm">删除选中</button>
+                    </div>
+                </div>
+
+                <div v-if="loading" class="text-center py-20">
+                    <i class="fas fa-circle-notch fa-spin text-3xl text-primary"></i>
+                </div>
+
+                <div v-else-if="history.length === 0" class="text-center py-20 text-gray-500">
+                    <i class="fas fa-images text-4xl mb-4"></i>
+                    <p>暂无上传记录</p>
+                </div>
+
+                <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div v-for="item in history" :key="item.id" class="history-card group">
+                        <label class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <input type="checkbox" :value="item.id" v-model="selectedImages" class="w-4 h-4 rounded text-primary">
+                        </label>
+                        <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer" @click="preview(item)">
+                            <img :src="item.thumb" class="w-full h-full object-cover" loading="lazy">
+                        </div>
+                        <div class="mt-2 flex gap-1">
+                            <button @click="copy(item.links.url)" class="flex-1 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-700">复制</button>
+                            <button v-if="isAdmin" @click="deleteImage(item.id, 'history')" class="px-2 py-1.5 text-xs text-red-500 border border-red-200 dark:border-red-900 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ formatDate(item.created_at) }}</div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="pagination.pages > 1" class="flex justify-center gap-2 mt-8">
+                    <button @click="loadHistory(pagination.page - 1)" :disabled="pagination.page <= 1" class="page-btn">上一页</button>
+                    <span class="px-3 py-2 text-sm">{{ pagination.page }} / {{ pagination.pages }}</span>
+                    <button @click="loadHistory(pagination.page + 1)" :disabled="pagination.page >= pagination.pages" class="page-btn">下一页</button>
+                </div>
+            </div>
+
+            <!-- API View -->
+            <div v-if="view === 'api'">
+                <div class="max-w-3xl mx-auto">
+
+                    <div v-if="!isAdmin" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-6">
+                        登录后可查看 API 密钥
+                    </div>
+
+                    <div v-else class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
+                        <h3 class="font-semibold mb-3">API 密钥</h3>
+                        <div class="flex gap-2">
+                            <input :value="user.api_key" readonly class="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 font-mono text-sm">
+                            <button @click="copy(user.api_key)" class="px-4 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg text-sm">复制</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div v-for="ep in apiEndpoints" :key="ep.title" class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center gap-3 mb-3">
+                                <span class="px-2 py-1 text-xs font-bold rounded" :class="ep.methodClass">{{ ep.method }}</span>
+                                <code class="font-mono text-sm">{{ ep.url }}</code>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-3">{{ ep.desc }}</p>
+                            <div class="relative">
+                                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm"><code>{{ ep.example }}</code></pre>
+                                <button @click="copy(ep.example)" class="absolute top-2 right-2 px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded text-white">复制</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin View -->
+            <div v-if="view === 'admin'">
+                <h2 class="text-2xl font-bold mb-6">管理面板</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold text-primary">{{ stats.total_images }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">总图片数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold text-green-500">{{ stats.daily_uploads }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">今日上传</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold text-purple-500">{{ formatSize(stats.total_size) }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">占用空间</div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 font-semibold">存储路径</div>
+                    <div class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <p>图片存储: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/data/images</code></p>
+                        <p class="mt-2">索引文件: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">/data/meta/index.json</code></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast -->
+        <div class="fixed bottom-6 right-6 z-50 space-y-2">
+            <div v-for="toast in toasts" :key="toast.id"
+                 class="px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 transition-all"
+                 :class="toast.type === 'error' ? 'bg-red-500' : 'bg-gray-800 dark:bg-gray-700'"
+            >
+                <i :class="toast.type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
+                {{ toast.message }}
+            </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div v-if="showLogin" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">管理员登录</h3>
+                    <button @click="showLogin = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form @submit.prevent="login">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">用户名</label>
+                        <input v-model="loginForm.user" type="text" required class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-1">密码</label>
+                        <input v-model="loginForm.password" type="password" required class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                    </div>
+                    <button type="submit" :disabled="loginLoading" class="w-full py-2.5 bg-primary hover:bg-primaryHover text-white rounded-lg font-medium transition-colors disabled:opacity-60">
+                        {{ loginLoading ? '登录中...' : '登录' }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div v-if="previewImage" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden max-w-4xl w-full max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold truncate">{{ previewImage.filename }}</h3>
+                    <button @click="previewImage = null" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                    <img :src="previewImage.url" class="max-w-full max-h-[60vh] object-contain rounded">
+                </div>
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex gap-2">
+                        <input :value="previewImage.links.url" readonly class="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-0 text-sm">
+                        <button @click="copy(previewImage.links.url)" class="px-4 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg text-sm">复制链接</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/api.js?v=3"></script>
+    <script src="/assets/app.js?v=6"></script>
+</body>
+</html>

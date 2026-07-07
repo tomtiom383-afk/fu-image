@@ -1,0 +1,73 @@
+{
+    "site": {
+        "name": "芙的床",
+        "base_url": "https://image.example.com"
+    },
+    "security": {
+        "session_lifetime": 7776000,
+        "remember_lifetime": 7776000,
+        "cookie_name": "image_session",
+        "upload_rate_limit_per_minute": 60
+    },
+    "auth": {
+        "admin_user": "admin",
+        "api_keys": {
+            "YOUR_API_KEY_HERE": {
+                "name": "default",
+                "expires": 0
+            }
+        },
+        "password_hash": "YOUR_BCRYPT_HASH_HERE"
+    },
+    "upload": {
+        "data_dir": "/data/images",
+        "meta_dir": "/data/meta",
+        "storage_path": "Y/m/d",
+        "max_size": 10485760,
+        "max_files": 30,
+        "allowed_extensions": [
+            "jpg",
+            "jpeg",
+            "png",
+            "gif",
+            "bmp",
+            "webp",
+            "ico",
+            "jfif",
+            "tif",
+            "tga",
+            "svg"
+        ],
+        "allowed_mime_prefixes": [
+            "image/"
+        ],
+        "image_max_width": 10240,
+        "image_max_height": 10240,
+        "image_min_width": 5,
+        "image_min_height": 5,
+        "convert_webp": false,
+        "webp_quality": 80,
+        "jpeg_quality": 80,
+        "png_compression": 6,
+        "watermark": {
+            "enabled": false,
+            "text": "芙的床",
+            "position": "bottom-right",
+            "color": "255,255,255",
+            "alpha": 30,
+            "size": 5
+        },
+        "thumbnail": {
+            "enabled": true,
+            "width": 258,
+            "height": 258,
+            "method": "fit"
+        }
+    },
+    "cors": {
+        "allowed_origins": [
+            "https://image.example.com"
+        ]
+    },
+    "timezone": "Asia/Shanghai"
+}
