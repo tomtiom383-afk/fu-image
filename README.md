@@ -1,6 +1,6 @@
-# 芙的床
+# FuImage
 
-一个轻量级的自托管图床应用，前端使用 Vue 3 + Tailwind CSS，后端使用原生 PHP。
+A lightweight self-hosted image hosting app with Vue 3 + Tailwind CSS frontend and native PHP backend.
 
 ## 功能
 

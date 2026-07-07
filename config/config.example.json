@@ -1,6 +1,6 @@
 {
     "site": {
-        "name": "芙的床",
+        "name": "FuImage",
         "base_url": "https://image.example.com"
     },
     "security": {
@@ -51,7 +51,7 @@
         "png_compression": 6,
         "watermark": {
             "enabled": false,
-            "text": "芙的床",
+            "text": "FuImage",
             "position": "bottom-right",
             "color": "255,255,255",
             "alpha": 30,
