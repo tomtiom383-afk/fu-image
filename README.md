@@ -21,8 +21,14 @@ A lightweight self-hosted image hosting app with Vue 3 + Tailwind CSS frontend a
 ├── config/          # 配置文件
 │   ├── config.example.json   # 配置模板
 │   └── config.json           # 运行时配置（不提交到仓库）
+├── deploy/          # Docker 部署文件
+│   ├── docker-compose.yml    # Docker Compose 配置
+│   └── nginx.conf            # Nginx 站点配置
 ├── src/             # PHP 核心类
 ├── index.html       # 前端入口
+├── Dockerfile       # PHP-FPM Docker 镜像
+├── docker-entrypoint.sh      # Docker 启动脚本
+├── docker-entrypoint.php     # 配置生成器
 └── README.md        # 本文件
 ```
 
@@ -33,6 +39,8 @@ A lightweight self-hosted image hosting app with Vue 3 + Tailwind CSS frontend a
 - 已启用 `file_uploads` 和相关图片处理扩展（`gd` 或 `imagick`，项目默认使用 GD）
 
 ## 安装
+
+### 传统部署（Nginx + PHP）
 
 1. 克隆仓库到 Web 服务器目录：
 
@@ -65,6 +73,51 @@ A lightweight self-hosted image hosting app with Vue 3 + Tailwind CSS frontend a
    ```
 
 5. 配置 Web 服务器将请求指向项目根目录，并确保 PHP 能正常解析。
+
+### Docker 部署（推荐）
+
+使用 Docker Compose 一键部署：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/yourname/fu-image.git
+cd fu-image
+
+# 2. 编辑 docker-compose.yml 配置环境变量（必填）
+#    - SITE_URL: 你的站点地址
+#    - ADMIN_PASSWORD_HASH: bcrypt 密码哈希
+#    - API_KEY: 用于上传的密钥
+
+# 3. 启动服务
+docker compose -f deploy/docker-compose.yml up -d --build
+
+# 4. 查看日志
+docker compose -f deploy/docker-compose.yml logs -f
+```
+
+服务启动后访问 `http://localhost` 即可使用。
+
+**环境变量说明：**
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `SITE_URL` | ✅ | 站点地址，例如 `https://image.example.com` |
+| `ADMIN_PASSWORD_HASH` | ✅ | 管理员密码的 bcrypt 哈希 |
+| `API_KEY` | ✅ | 上传 API 密钥，`openssl rand -hex 16` 生成 |
+| `ADMIN_USER` | ❌ | 管理员用户名（默认 `admin`） |
+| `SITE_NAME` | ❌ | 站点名称（默认 `FuImage`） |
+| `TIMEZONE` | ❌ | 时区（默认 `Asia/Shanghai`） |
+| `UPLOAD_MAX_SIZE` | ❌ | 上传大小限制（默认 `10485760`） |
+| `CONVERT_WEBP` | ❌ | 是否自动转换 WebP（默认 `false`） |
+
+数据持久化在 Docker 卷中，重启不会丢失。如需备份：
+
+```bash
+# 备份图片数据
+docker run --rm -v fuimage_images:/data -v ./backup:/backup alpine tar czf /backup/images.tar.gz -C /data .
+# 备份元数据
+docker run --rm -v fuimage_meta:/data -v ./backup:/backup alpine tar czf /backup/meta.tar.gz -C /data .
+```
 
 ## 生成密码哈希
 

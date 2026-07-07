@@ -1,0 +1,22 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker (these are copied into the image via Dockerfile, not sent as build-context noise)
+data/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime (won't exist at build time but just in case)
+config/config.json
+*.log
+*.tmp

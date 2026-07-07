@@ -1,0 +1,73 @@
+version: '3.8'
+
+name: fuimage
+
+services:
+  php-fpm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fuimage-app
+    environment:
+      # Required: at minimum set SITE_URL and ADMIN_PASSWORD_HASH
+      - SITE_NAME=FUIMAGE  # Watermark text and site brand
+      - SITE_URL=https://image.example.com
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD_HASH=
+      # Generate: openssl rand -hex 16
+      - API_KEY=
+      - TIMEZONE=Asia/Shanghai
+
+      # Upload settings (optional, defaults match config.example.json)
+      - UPLOAD_MAX_SIZE=10485760
+      - CONVERT_WEBP=false
+      - WEBP_QUALITY=80
+      - JPEG_QUALITY=80
+      - SESSION_LIFETIME=7776000
+      - REMEMBER_LIFETIME=7776000
+      - UPLOAD_RATE_LIMIT=60
+      - WATERMARK_ENABLED=false
+      - WATERMARK_TEXT=FuImage
+      - THUMBNAIL_ENABLED=true
+
+      # Set to "1" to regenerate config.json on restart (overwrites existing)
+      - FORCE_RECONFIG=
+    volumes:
+      - image_data:/data/images
+      - meta_data:/data/meta
+    restart: unless-stopped
+    networks:
+      - fuimage-net
+    healthcheck:
+      test: ["CMD", "php", "-r", "echo 'ok';"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: fuimage-web
+    depends_on:
+      - php-fpm
+    ports:
+      - "80:80"
+      # Uncomment for HTTPS with your own cert
+      # - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - .:/var/www/html:ro
+      - image_data:/data/images:ro
+    restart: unless-stopped
+    networks:
+      - fuimage-net
+
+networks:
+  fuimage-net:
+    driver: bridge
+
+volumes:
+  image_data:
+    name: fuimage_images
+  meta_data:
+    name: fuimage_meta
