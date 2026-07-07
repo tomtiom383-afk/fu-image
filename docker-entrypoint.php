@@ -51,21 +51,9 @@ function setNestedKey(array &$arr, string $path, $value): void
     $current = $value;
 }
 
-function getNestedKey(array $arr, string $path)
-{
-    $keys = explode('.', $path);
-    foreach ($keys as $k) {
-        if (!isset($arr[$k])) {
-            return null;
-        }
-        $arr = $arr[$k];
-    }
-    return $arr;
-}
-
 foreach ($envOverrides as $override) {
     $envName = $override[0];
-    $configPath = $override[1];
+    $envKey = $override[1];
     $type = $override[2] ?? 'string';
 
     $envValue = getenv($envName);
@@ -84,7 +72,7 @@ foreach ($envOverrides as $override) {
             $value = $envValue;
     }
 
-    if ($configPath === 'auth.api_keys') {
+    if ($envKey === 'auth.api_keys') {
         // Special: API_KEY env var sets a key-value pair in auth.api_keys
         $keyName = $envValue;
         $config['auth']['api_keys'] = [
@@ -95,7 +83,7 @@ foreach ($envOverrides as $override) {
             unset($config['auth']['api_keys']['YOUR_API_KEY_HERE']);
         }
     } else {
-        setNestedKey($config, $configPath, $value);
+        setNestedKey($config, $envKey, $value);
     }
 }
 

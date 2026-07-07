@@ -39,5 +39,5 @@ VOLUME ["/data/images", "/data/meta"]
 ENTRYPOINT ["/var/www/html/docker-entrypoint.sh"]
 CMD ["php-fpm"]
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD php-fpm -t || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD php -r "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);" || exit 1
